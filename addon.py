@@ -454,6 +454,20 @@ class BlenderMCPServer:
             # Create a local namespace for execution
             namespace = {"bpy": bpy, "__builtins__": __builtins__}
 
+            # Pre-process code to fix common Blender API compatibility issues
+            processed_code = code
+
+            # Fix 1: Old render engine names -> new names
+            # In Blender 4.x, 'EEVEE' became 'BLENDER_EEVEE', 'WORKBENCH' became 'BLENDER_WORKBENCH'
+            engine_fixes = {
+                "'EEVEE'": "'BLENDER_EEVEE'",
+                '"EEVEE"': '"BLENDER_EEVEE"',
+                "'WORKBENCH'": "'BLENDER_WORKBENCH'",
+                '"WORKBENCH"': '"BLENDER_WORKBENCH"',
+            }
+            for old, new in engine_fixes.items():
+                processed_code = processed_code.replace(old, new)
+
             # Capture stdout during execution
             capture_buffer = io.StringIO()
             result = None
@@ -461,14 +475,14 @@ class BlenderMCPServer:
             with redirect_stdout(capture_buffer):
                 # Try to execute normally first
                 try:
-                    exec(code, namespace)
+                    exec(processed_code, namespace)
                 except SyntaxError as se:
                     if "'return' outside function" in str(se):
                         # Re-execute with code wrapped in a function
                         # This handles return statements by wrapping in a function
                         wrapped_code = f"""
 def _execute_with_return():
-{code}
+{processed_code}
 """
                         try:
                             exec(wrapped_code, namespace)
