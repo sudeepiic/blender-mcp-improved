@@ -56,12 +56,14 @@ class TestBlenderConnection:
     def test_disconnect(self):
         """Test disconnection from Blender."""
         conn = BlenderConnection(host="localhost", port=9876)
-        conn.sock = MagicMock()
+        mock_sock = MagicMock()
+        conn.sock = mock_sock
 
         conn.disconnect()
 
+        # Check close was called before sock was set to None
+        mock_sock.close.assert_called_once()
         assert conn.sock is None
-        conn.sock.close.assert_called_once()
 
     def test_disconnect_with_error(self):
         """Test disconnect with socket error."""

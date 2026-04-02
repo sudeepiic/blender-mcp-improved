@@ -62,7 +62,7 @@ class TestTelemetryCollector:
     @pytest.fixture
     def collector(self, mock_config):
         """Create a TelemetryCollector with mocked config."""
-        with patch('blender_mcp.telemetry.telemetry_config', mock_config):
+        with patch('blender_mcp.config.telemetry_config', mock_config):
             with patch('blender_mcp.telemetry.HAS_SUPABASE', False):
                 return TelemetryCollector()
 
