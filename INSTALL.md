@@ -2,34 +2,41 @@
 
 ## Quick Install
 
-### 1. Install the MCP Server
+### Option 1: Use the Improved `addon.py` (Recommended)
+
+The original `addon.py` has been improved with security fixes and is fully functional:
 
 ```bash
-# Using uv (recommended)
-uv pip install git+https://github.com/sudeepiic/blender-mcp-improved.git
+# Download the improved addon
+wget https://raw.githubusercontent.com/sudeepiic/blender-mcp-improved/main/addon.py -O blender_mcp.py
 
-# Or clone and install
+# Or with curl
+curl -o blender_mcp.py https://raw.githubusercontent.com/sudeepiic/blender-mcp-improved/main/addon.py
+```
+
+**Then in Blender:**
+1. **Edit → Preferences → Add-ons**
+2. Click **"Install..."**
+3. Select `blender_mcp.py`
+4. Enable **"Interface: Blender MCP"**
+
+**To connect:**
+- Press **N** in Blender to open sidebar
+- Find **"BlenderMCP"** tab
+- Click **"Connect to Claude"**
+
+### Option 2: Install from Source
+
+```bash
+# Clone the repository
 git clone https://github.com/sudeepiic/blender-mcp-improved.git
 cd blender-mcp-improved
+
+# Install the MCP server
 uv pip install -e .
 ```
 
-### 2. Install the Blender Addon
-
-1. Download `addon.py` from the repository
-2. Open Blender
-3. Go to **Edit → Preferences → Add-ons**
-4. Click **"Install..."** and select `addon.py`
-5. Enable **"Interface: Blender MCP"**
-
-### 3. Start the Connection
-
-In Blender:
-1. Press **N** to open the sidebar
-2. Find the **"BlenderMCP"** tab
-3. Click **"Connect to Claude"**
-
-### 4. Configure Claude Desktop
+## Configure Claude Desktop
 
 Edit `~/.config/Claude/claude_desktop_config.json`:
 
@@ -44,28 +51,73 @@ Edit `~/.config/Claude/claude_desktop_config.json`:
 }
 ```
 
-## Environment Variables (Optional)
+## Environment Variables
 
 ```bash
-export BLENDER_HOST="localhost"  # Default
-export BLENDER_PORT="9876"         # Default
-export DISABLE_TELEMETRY="true"    # Disable telemetry
-export RODIN_FREE_TRIAL_KEY="your-key"  # Hyper3D API key
+# Connection settings (optional)
+export BLENDER_HOST="localhost"
+export BLENDER_PORT="9876"
+
+# Disable telemetry (optional)
+export DISABLE_TELEMETRY="true"
+
+# Hyper3D API key override (optional)
+export RODIN_FREE_TRIAL_KEY="your-key-here"
 ```
 
-## Verification
+## Features
 
-Once connected, you should see a hammer icon 🛠️ in Claude with Blender tools available.
+- ✅ **Scene inspection**: Get info about objects, materials, cameras
+- ✅ **Object manipulation**: Create, modify, delete 3D objects
+- ✅ **Python execution**: Run arbitrary Python in Blender
+- ✅ **Poly Haven**: Download HDRIs, textures, and 3D models
+- ✅ **Sketchfab**: Search and download Sketchfab models
+- ✅ **Hyper3D Rodin**: AI-generated 3D models
+- ✅ **Hunyuan3D**: Tencent's 3D model generation
+- ✅ **Viewport screenshots**: Capture Blender viewport
+- ✅ **Telemetry control**: Opt out of data collection
 
 ## Troubleshooting
 
-**"Not connected to Blender"**
-- Make sure Blender addon is installed
-- Click "Connect to Claude" in Blender sidebar
-- Check Blender and Claude are both running
+### "Not connected to Blender"
+- Make sure the addon is installed in Blender
+- Click "Connect to Claude" in the Blender sidebar
+- Check the port matches (default: 9876)
 
-**Port already in use**
-- Change port in Blender sidebar (e.g., 9877)
-- Set `BLENDER_PORT=9877` environment variable
+### Port already in use
+- Change port in Blender sidebar
+- Or set: `export BLENDER_PORT=9877`
 
-**For more help:** See [CONTRIBUTING.md](CONTRIBUTING.md)
+### API key errors
+- For Hyper3D: Set `RODIN_FREE_TRIAL_KEY` environment variable
+- For Sketchfab: Enter your API key in the Blender sidebar
+
+## Development Setup
+
+For contributing to the project:
+
+```bash
+# Run tests
+uv run pytest tests/
+
+# Run all checks
+./tests/run_all_tests.sh
+
+# Format code
+uv run black src/ tests/
+```
+
+## Links
+
+- **Repository**: https://github.com/sudeepiic/blender-mcp-improved
+- **Original**: https://github.com/ahujasid/blender-mcp
+- **Issues**: https://github.com/sudeepiic/blender-mcp-improved/issues
+
+## What's Improved?
+
+- 🔒 Security: Hardcoded API key now reads from environment
+- 📝 Type hints: Added to server.py for better IDE support
+- 🧪 Tests: Comprehensive test suite with pytest
+- 🔧 Dev tools: Pre-commit hooks, Makefile, linters
+- 📚 Documentation: CONTRIBUTING.md, INSTALL.md
+- 🏗️ Modular structure: Separated concerns for maintainability
