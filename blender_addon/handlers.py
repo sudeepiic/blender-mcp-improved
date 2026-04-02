@@ -208,8 +208,18 @@ def get_viewport_screenshot(max_size: int = 800, filepath: Optional[str] = None,
         if not area:
             return {"error": "No 3D viewport found"}
 
-        # Take screenshot with proper context override
-        with bpy.context.temp_override(area=area):
+        # Find a region within the area (WINDOW region is required for screenshot_area)
+        region = None
+        for r in area.regions:
+            if r.type == 'WINDOW':
+                region = r
+                break
+
+        if not region:
+            return {"error": "No WINDOW region found in 3D viewport"}
+
+        # Take screenshot with proper context override (needs both area and region)
+        with bpy.context.temp_override(area=area, region=region):
             bpy.ops.screen.screenshot_area(filepath=filepath)
 
         # Load and resize if needed
