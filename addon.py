@@ -468,6 +468,24 @@ class BlenderMCPServer:
             for old, new in engine_fixes.items():
                 processed_code = processed_code.replace(old, new)
 
+            # Fix 2: Blender 4.x material node input name changes
+            # "Emission" -> "Emission Color", "Transmission" -> "Transmission Weight"
+            node_input_fixes = {
+                'inputs["Emission"]': 'inputs.get("Emission Color") or inputs.get("Emission")',
+                'inputs["Transmission"]': 'inputs.get("Transmission Weight") or inputs.get("Transmission")',
+                'inputs[\'Emission\']': 'inputs.get("Emission Color") or inputs.get("Emission")',
+                'inputs[\'Transmission\']': 'inputs.get("Transmission Weight") or inputs.get("Transmission")',
+                'inputs["Emission Strength"]': 'inputs.get("Emission Strength")',  # This one exists in 4.x
+                'inputs["Alpha"]': 'inputs.get("Alpha") or inputs.get("Base Color").default_value',
+                'inputs[\'Alpha\']': 'inputs.get("Alpha") or inputs.get("Base Color").default_value',
+            }
+            for old, new in node_input_fixes.items():
+                processed_code = processed_code.replace(old, new)
+
+            # Fix 3: HEMI light type was removed in Blender 4.x, use POINT with low intensity instead
+            processed_code = processed_code.replace("type='HEMI'", "type='POINT'  # HEMI replaced with POINT")
+            processed_code = processed_code.replace('type="HEMI"', 'type="POINT"  # HEMI replaced with POINT')
+
             # Capture stdout during execution
             capture_buffer = io.StringIO()
             result = None
