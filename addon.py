@@ -30,7 +30,15 @@ bl_info = {
     "category": "Interface",
 }
 
-RODIN_FREE_TRIAL_KEY = "k9TcfFoEhNd9cCPP2guHAHHHkctZHIRhZDywZ1euGUXwihbYLpOjQhofby80NJez"
+def get_rodin_free_trial_key() -> str:
+    """
+    Get the Rodin free trial API key from environment variable or use default.
+    Users can override by setting RODIN_FREE_TRIAL_KEY environment variable.
+    """
+    return os.environ.get("RODIN_FREE_TRIAL_KEY", "k9TcfFoEhNd9cCPP2guHAHHHkctZHIRhZDywZ1euGUXwihbYLpOjQhofby80NJez")
+
+# Backward compatibility - can be removed in future versions
+RODIN_FREE_TRIAL_KEY = get_rodin_free_trial_key()
 
 # Add User-Agent as required by Poly Haven API
 REQ_HEADERS = requests.utils.default_headers()
@@ -1154,7 +1162,7 @@ class BlenderMCPServer:
                 }
             mode = bpy.context.scene.blendermcp_hyper3d_mode
             message = f"Hyper3D Rodin integration is enabled and ready to use. Mode: {mode}. " + \
-                f"Key type: {'private' if bpy.context.scene.blendermcp_hyper3d_api_key != RODIN_FREE_TRIAL_KEY else 'free_trial'}"
+                f"Key type: {'private' if bpy.context.scene.blendermcp_hyper3d_api_key != get_rodin_free_trial_key() else 'free_trial'}"
             return {
                 "enabled": True,
                 "message": message
@@ -2405,7 +2413,7 @@ class BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey(bpy.types.Operator):
     bl_label = "Set Free Trial API Key"
 
     def execute(self, context):
-        context.scene.blendermcp_hyper3d_api_key = RODIN_FREE_TRIAL_KEY
+        context.scene.blendermcp_hyper3d_api_key = get_rodin_free_trial_key()
         context.scene.blendermcp_hyper3d_mode = 'MAIN_SITE'
         self.report({'INFO'}, "API Key set successfully!")
         return {'FINISHED'}
