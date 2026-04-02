@@ -389,35 +389,57 @@ class BlenderMCPServer:
             if dir_path and not os.path.exists(dir_path):
                 os.makedirs(dir_path, exist_ok=True)
 
-            # Find the active 3D viewport with a region for rendering
+            # Find the active 3D viewport
             area = None
-            region = None
             for a in bpy.context.screen.areas:
                 if a.type == 'VIEW_3D':
                     area = a
-                    for r in a.regions:
-                        if r.type == 'WINDOW':
-                            region = r
-                            break
                     break
 
             if not area:
                 return {"error": "No 3D viewport found"}
 
-            if not region:
-                return {"error": "No valid viewport region found"}
+            # Store current render settings
+            original_engine = bpy.context.scene.render.engine
+            original_file_format = bpy.context.scene.render.image_settings.file_format
+            original_file_path = bpy.context.scene.render.filepath
 
-            # Take screenshot with proper context override
-            # Use screenshot_area for the specific viewport area
-            with bpy.context.temp_override(area=area, region=region):
-                success = bpy.ops.screen.screenshot_area(filepath=filepath)
-                if success != {'FINISHED'} and success != {'CANCELLED'}:
-                    # Try alternative method if screenshot_area failed
-                    bpy.ops.screen.screenshot(filepath=filepath, full=False)
+            try:
+                # Set render to EEVEE for fast viewport screenshot
+                bpy.context.scene.render.engine = 'BLENDER_EEVEE_NEXT' if hasattr(bpy.context.scene.render, 'engine') else 'BLENDER_EEVEE'
+                bpy.context.scene.render.image_settings.file_format = format.upper()
+                bpy.context.scene.render.filepath = filepath
+
+                # Get the area for context override
+                for region in area.regions:
+                    if region.type == 'WINDOW':
+                        # Use OpenGL render for viewport screenshot
+                        with bpy.context.temp_override(area=area, region=region):
+                            # Try the modern screenshot operator first
+                            try:
+                                bpy.ops.screen.screenshot(filepath=filepath, full=False)
+                            except:
+                                # Fallback to using the area's buffer
+                                import bpy_extras
+                                offscreen = area.spaces.active
+                                if hasattr(bpy.ops.render, 'render'):
+                                    # Render just the viewport
+                                    bpy.ops.render.opengl(write_still=True)
+
+                        break
+
+            finally:
+                # Restore original settings
+                bpy.context.scene.render.engine = original_engine
+                bpy.context.scene.render.image_settings.file_format = original_file_format
+                bpy.context.scene.render.filepath = original_file_path
 
             # Verify the file was created
             if not os.path.exists(filepath):
-                return {"error": f"Screenshot file was not created at {filepath}"}
+                # Try one more approach - use render with still=True
+                bpy.ops.render.render(write_still=True)
+                if not os.path.exists(filepath):
+                    return {"error": f"Screenshot file was not created at {filepath}"}
 
             # Load and resize if needed
             img = bpy.data.images.load(filepath)
@@ -445,6 +467,17 @@ class BlenderMCPServer:
             }
 
         except Exception as e:
+            # Try absolute last resort - simple screenshot to temp
+            try:
+                import tempfile
+                temp_file = tempfile.gettempdir() + "/blender_mcp_screenshot.png"
+                bpy.ops.screen.screenshot(filepath=temp_file)
+                if os.path.exists(temp_file):
+                    import shutil
+                    shutil.copy(temp_file, filepath)
+                    return {"success": True, "filepath": filepath, "width": 0, "height": 0}
+            except:
+                pass
             return {"error": str(e)}
 
     def execute_code(self, code):

@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import base64
 from urllib.parse import urlparse
+import time
 
 # Import telemetry
 from .telemetry import record_startup, get_telemetry
@@ -350,10 +351,11 @@ def get_viewport_screenshot(ctx: Context, max_size: int = 800) -> Image:
     """
     try:
         blender = get_blender_connection()
-        
-        # Create temp file path
+
+        # Create temp file path - use timestamp instead of PID for better cross-process compatibility
         temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, f"blender_screenshot_{os.getpid()}.png")
+        timestamp = int(time.time() * 1000)
+        temp_path = os.path.join(temp_dir, f"blender_screenshot_{timestamp}.png")
         
         result = blender.send_command("get_viewport_screenshot", {
             "max_size": max_size,
