@@ -384,19 +384,40 @@ class BlenderMCPServer:
             if not filepath:
                 return {"error": "No filepath provided"}
 
-            # Find the active 3D viewport
+            # Ensure the directory exists
+            dir_path = os.path.dirname(filepath)
+            if dir_path and not os.path.exists(dir_path):
+                os.makedirs(dir_path, exist_ok=True)
+
+            # Find the active 3D viewport with a region for rendering
             area = None
+            region = None
             for a in bpy.context.screen.areas:
                 if a.type == 'VIEW_3D':
                     area = a
+                    for r in a.regions:
+                        if r.type == 'WINDOW':
+                            region = r
+                            break
                     break
 
             if not area:
                 return {"error": "No 3D viewport found"}
 
+            if not region:
+                return {"error": "No valid viewport region found"}
+
             # Take screenshot with proper context override
-            with bpy.context.temp_override(area=area):
-                bpy.ops.screen.screenshot_area(filepath=filepath)
+            # Use screenshot_area for the specific viewport area
+            with bpy.context.temp_override(area=area, region=region):
+                success = bpy.ops.screen.screenshot_area(filepath=filepath)
+                if success != {'FINISHED'} and success != {'CANCELLED'}:
+                    # Try alternative method if screenshot_area failed
+                    bpy.ops.screen.screenshot(filepath=filepath, full=False)
+
+            # Verify the file was created
+            if not os.path.exists(filepath):
+                return {"error": f"Screenshot file was not created at {filepath}"}
 
             # Load and resize if needed
             img = bpy.data.images.load(filepath)
@@ -431,17 +452,53 @@ class BlenderMCPServer:
         # This is powerful but potentially dangerous - use with caution
         try:
             # Create a local namespace for execution
-            namespace = {"bpy": bpy}
+            namespace = {"bpy": bpy, "__builtins__": __builtins__}
 
-            # Capture stdout during execution, and return it as result
+            # Capture stdout during execution
             capture_buffer = io.StringIO()
+            result = None
+
             with redirect_stdout(capture_buffer):
-                exec(code, namespace)
+                # Try to execute normally first
+                try:
+                    exec(code, namespace)
+                except SyntaxError as se:
+                    if "'return' outside function" in str(se):
+                        # Re-execute with code wrapped in a function
+                        # This handles return statements by wrapping in a function
+                        wrapped_code = f"""
+def _execute_with_return():
+{code}
+"""
+                        try:
+                            exec(wrapped_code, namespace)
+                            # Call the function and capture its return value
+                            result = namespace["_execute_with_return"]()
+                        except Exception as inner_e:
+                            return {"executed": False, "error": f"Error executing wrapped code: {inner_e}"}
+                    else:
+                        raise
+                except Exception:
+                    raise
 
             captured_output = capture_buffer.getvalue()
-            return {"executed": True, "result": captured_output}
+
+            # If we got a result from the wrapped function, use it
+            if result is not None:
+                return {"executed": True, "result": str(result)}
+
+            # Otherwise return any captured output
+            if captured_output:
+                return {"executed": True, "result": captured_output}
+
+            # If no output and no result, look for a result variable in namespace
+            if "result" in namespace:
+                return {"executed": True, "result": str(namespace["result"])}
+
+            return {"executed": True, "result": "Code executed successfully"}
+
         except Exception as e:
-            raise Exception(f"Code execution error: {str(e)}")
+            return {"executed": False, "error": str(e)}
 
 
 
